@@ -7,15 +7,15 @@ from keras.layers import concatenate, Conv2DTranspose, BatchNormalization
 from keras import backend as K
 
 
-def fire_module(x, fire_id, squeeze=16, expand=64):
+def fire_module(x, fire_id, squeeze=16, expand_1x1=64, expand_3x3=64):
     f_name = "fire{0}/{1}"
     channel_axis = 1 if K.image_data_format() == 'channels_first' else -1
 
     x = Conv2D(squeeze, (1, 1), activation='relu', padding='same', name=f_name.format(fire_id, "squeeze1x1"))(x)
     x = BatchNormalization(axis=channel_axis)(x)
 
-    left = Conv2D(expand, (1, 1), activation='relu', padding='same', name=f_name.format(fire_id, "expand1x1"))(x)
-    right = Conv2D(expand, (3, 3), activation='relu', padding='same', name=f_name.format(fire_id, "expand3x3"))(x)
+    left = Conv2D(expand_1x1, (1, 1), activation='relu', padding='same', name=f_name.format(fire_id, "expand1x1"))(x)
+    right = Conv2D(expand_3x3, (3, 3), activation='relu', padding='same', name=f_name.format(fire_id, "expand3x3"))(x)
     x = concatenate([left, right], axis=channel_axis, name=f_name.format(fire_id, "concat"))
     return x
 
@@ -36,18 +36,18 @@ def SqueezeUNet(inputs, num_classes=None, deconv_ksize=3, dropout=0.5, activatio
     x01 = Conv2D(64, (3, 3), strides=(2, 2), padding='same', activation='relu', name='conv1')(inputs)
     x02 = MaxPooling2D(pool_size=(3, 3), strides=(2, 2), name='pool1', padding='same')(x01)
 
-    x03 = fire_module(x02, fire_id=2, squeeze=16, expand=64)
-    x04 = fire_module(x03, fire_id=3, squeeze=16, expand=64)
+    x03 = fire_module(x02, fire_id=2, squeeze=16, expand_1x1=64, expand_3x3=64)
+    x04 = fire_module(x03, fire_id=3, squeeze=16, expand_1x1=64, expand_3x3=64)
     x05 = MaxPooling2D(pool_size=(3, 3), strides=(2, 2), name='pool3', padding="same")(x04)
 
-    x06 = fire_module(x05, fire_id=4, squeeze=32, expand=128)
-    x07 = fire_module(x06, fire_id=5, squeeze=32, expand=128)
+    x06 = fire_module(x05, fire_id=4, squeeze=32, expand_1x1=128, expand_3x3=128)
+    x07 = fire_module(x06, fire_id=5, squeeze=32, expand_1x1=128, expand_3x3=128)
     x08 = MaxPooling2D(pool_size=(3, 3), strides=(2, 2), name='pool5', padding="same")(x07)
 
-    x09 = fire_module(x08, fire_id=6, squeeze=48, expand=192)
-    x10 = fire_module(x09, fire_id=7, squeeze=48, expand=192)
-    x11 = fire_module(x10, fire_id=8, squeeze=64, expand=256)
-    x12 = fire_module(x11, fire_id=9, squeeze=64, expand=256)
+    x09 = fire_module(x08, fire_id=6, squeeze=48, expand_1x1=192, expand_3x3=192)
+    x10 = fire_module(x09, fire_id=7, squeeze=48, expand_1x1=192, expand_3x3=192)
+    x11 = fire_module(x10, fire_id=8, squeeze=64, expand_1x1=256, expand_3x3=256)
+    x12 = fire_module(x11, fire_id=9, squeeze=64, expand_1x1=256, expand_3x3=256)
 
     if dropout != 0.0:
         x12 = Dropout(dropout)(x12)
